@@ -1,3 +1,5 @@
+[![Travis CI Build Status](https://travis-ci.com/CiscoSecurity/tr-05-serverless-google-safe-browsing.svg?branch=develop)](https://travis-ci.com/CiscoSecurity/tr-05-serverless-google-safe-browsing)
+
 # Google Safe Browsing Relay API
 
 A sample Relay API implementation using the
