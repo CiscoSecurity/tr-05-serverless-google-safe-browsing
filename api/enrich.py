@@ -30,8 +30,7 @@ def validate_relay_input():
         # Mimic the GSB API error response payload.
         error = {
             'code': 400,
-            'message': 'Invalid JSON payload received.\n' +
-                       json.dumps(error, indent=2),
+            'message': 'Invalid JSON payload received. ' + json.dumps(error),
             'details': error,
             'status': 'INVALID_ARGUMENT',
         }
