@@ -6,16 +6,11 @@ from uuid import uuid4
 
 import requests
 from flask import Blueprint, request, current_app
-from marshmallow import Schema, fields
 
+from api.schemas import ObservableSchema
 from api.utils import url_for, jsonify_data, jsonify_errors
 
 enrich_api = Blueprint('enrich', __name__)
-
-
-class ObservableSchema(Schema):
-    type = fields.String(required=True)
-    value = fields.String(required=True)
 
 
 observables_schema = ObservableSchema(many=True)
