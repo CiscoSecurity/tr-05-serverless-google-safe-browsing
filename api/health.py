@@ -1,7 +1,7 @@
 import requests
 from flask import Blueprint
 
-from api.utils import url_for, json_ok, json_error
+from api.utils import url_for, jsonify_data, jsonify_errors
 
 health_api = Blueprint('health', __name__)
 
@@ -12,7 +12,7 @@ def health():
     response = requests.get(url)
 
     if response.ok:
-        return json_ok({'status': 'ok'})
+        return jsonify_data({'status': 'ok'})
     else:
         error = response.json()['error']
-        return json_error(error)
+        return jsonify_errors(error)

@@ -8,7 +8,7 @@ import requests
 from flask import Blueprint, request, current_app
 from marshmallow import Schema, fields
 
-from api.utils import url_for, json_ok, json_error
+from api.utils import url_for, jsonify_data, jsonify_errors
 
 enrich_api = Blueprint('enrich', __name__)
 
@@ -30,7 +30,7 @@ def validate_relay_input():
         # Mimic the GSB API error response payload.
         error = {
             'code': 400,
-            'message': 'Invalid JSON payload received. ' + json.dumps(error),
+            'message': f'Invalid JSON payload received. {json.dumps(error)}.',
             'details': error,
             'status': 'INVALID_ARGUMENT',
         }
@@ -137,11 +137,11 @@ def extract_verdicts(observables, matches, start_time):
             observable = {'value': value, 'type': type}
 
             doc = {
-                'type': 'verdict',
                 'observable': observable,
                 'disposition': disposition,
                 'disposition_name': disposition_name,
                 'valid_time': valid_time,
+                **current_app.config['CTIM_VERDICT_DEFAULTS']
             }
 
             if 'judgement_id' in verdict:
@@ -167,20 +167,14 @@ def extract_judgements(observables, matches, start_time):
                 key(judgement)
             )
 
-            reason = f'{judgement["threatType"]} : {judgement["platformType"]}'
-
-            source_uri = (
-                current_app.config['GSB_TRANSPARENCY_REPORT_URL'].format(
-                    url=quote(value, safe=':')
-                )
-            )
-
             end_time = start_time + timedelta(seconds=cache_duration)
 
             valid_time = {
                 'start_time': start_time.isoformat() + 'Z',
                 'end_time': end_time.isoformat() + 'Z',
             }
+
+            reason = f'{judgement["threatType"]} : {judgement["platformType"]}'
 
             for type in types:
                 observable = {'value': value, 'type': type}
@@ -191,19 +185,13 @@ def extract_judgements(observables, matches, start_time):
 
                 doc = {
                     'id': judgement_id,
-                    'type': 'judgement',
                     'observable': observable,
                     'disposition': disposition,
                     'disposition_name': disposition_name,
-                    'valid_time': valid_time,
-                    'source': 'Google Safe Browsing',
-                    'source_uri': source_uri,
-                    'reason': reason,
                     'severity': severity,
-                    'priority': 90,
-                    'confidence': 'High',
-                    'tlp': 'white',
-                    'schema_version': '1.0.12',
+                    'valid_time': valid_time,
+                    'reason': reason,
+                    **current_app.config['CTIM_JUDGEMENT_DEFAULTS']
                 }
 
                 docs.append(doc)
@@ -220,20 +208,20 @@ def deliberate_observables():
     relay_input, error = validate_relay_input()
 
     if error:
-        return json_error(error)
+        return jsonify_errors(error)
 
     observables = group_observables(relay_input)
 
     if not observables:
         # Optimize a bit by not sending empty requests to the GSB API.
-        return json_ok({})
+        return jsonify_data({})
 
     gsb_input = build_gsb_input(observables)
 
     gsb_output, error = validate_gsb_output(gsb_input)
 
     if error:
-        return json_error(error)
+        return jsonify_errors(error)
 
     matches = group_matches(gsb_output)
 
@@ -246,7 +234,7 @@ def deliberate_observables():
     if verdicts:
         relay_output['verdicts'] = format_docs(verdicts)
 
-    return json_ok(relay_output)
+    return jsonify_data(relay_output)
 
 
 @enrich_api.route('/observe/observables', methods=['POST'])
@@ -254,20 +242,20 @@ def observe_observables():
     relay_input, error = validate_relay_input()
 
     if error:
-        return json_error(error)
+        return jsonify_errors(error)
 
     observables = group_observables(relay_input)
 
     if not observables:
         # Optimize a bit by not sending empty requests to the GSB API.
-        return json_ok({})
+        return jsonify_data({})
 
     gsb_input = build_gsb_input(observables)
 
     gsb_output, error = validate_gsb_output(gsb_input)
 
     if error:
-        return json_error(error)
+        return jsonify_errors(error)
 
     matches = group_matches(gsb_output)
 
@@ -285,7 +273,7 @@ def observe_observables():
     if verdicts:
         relay_output['verdicts'] = format_docs(verdicts)
 
-    return json_ok(relay_output)
+    return jsonify_data(relay_output)
 
 
 @enrich_api.route('/refer/observables', methods=['POST'])
@@ -293,7 +281,7 @@ def refer_observables():
     relay_input, error = validate_relay_input()
 
     if error:
-        return json_error(error)
+        return jsonify_errors(error)
 
     observables = group_observables(relay_input)
 
@@ -320,4 +308,4 @@ def refer_observables():
         for type in types
     ]
 
-    return json_ok(relay_output)
+    return jsonify_data(relay_output)
