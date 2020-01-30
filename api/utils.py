@@ -4,9 +4,8 @@ from flask import request, current_app, jsonify
 
 
 def url_for(endpoint):
-    # Authorization: Bearer <JWT>
     try:
-        scheme, token = request.headers['Authorization'].split(None, 1)
+        scheme, token = request.headers['Authorization'].split()
         assert scheme.lower() == 'bearer'
         credentials = jwt.decode(token, current_app.config['SECRET_KEY'])
     except (KeyError, ValueError, AssertionError, JoseError):
@@ -20,11 +19,11 @@ def url_for(endpoint):
     )
 
 
-def json_ok(data):
+def jsonify_data(data):
     return jsonify({'data': data})
 
 
-def json_error(error):
+def jsonify_errors(error):
     # Make the actual GSB error payload compatible with the expected TR error
     # payload in order to fix the following types of possible UI alerts, e.g.:
     # :code (not (instance? java.lang.String 40x)),

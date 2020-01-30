@@ -4,6 +4,22 @@ import os
 class Config(object):
     SECRET_KEY = os.environ.get('SECRET_KEY', '')
 
+    CTIM_VERDICT_DEFAULTS = {
+        'type': 'verdict',
+    }
+
+    CTIM_JUDGEMENT_DEFAULTS = {
+        'type': 'judgement',
+        'schema_version': '1.0.14',
+        'source': 'Google Safe Browsing',
+        'source_uri': (
+            'https://developers.google.com/safe-browsing/v4/lookup-api'
+        ),
+        'confidence': 'High',
+        'priority': 90,
+        'tlp': 'white',
+    }
+
     # GSB only works with URLs (domains are also acceptable),
     # so all the other types of observables have to be filtered out.
     GSB_OBSERVABLE_TYPES = {
