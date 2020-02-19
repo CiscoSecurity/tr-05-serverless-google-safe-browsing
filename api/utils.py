@@ -1,17 +1,24 @@
+from typing import Optional
+
 from authlib.jose import jwt
 from authlib.jose.errors import JoseError
 from flask import request, current_app, jsonify
 
 
-def url_for(endpoint):
+def get_jwt():
     try:
         scheme, token = request.headers['Authorization'].split()
         assert scheme.lower() == 'bearer'
-        credentials = jwt.decode(token, current_app.config['SECRET_KEY'])
+        return jwt.decode(token, current_app.config['SECRET_KEY'])
     except (KeyError, ValueError, AssertionError, JoseError):
-        credentials = {}
+        return {}
 
-    key = credentials.get('key', '')  # GSB_API_KEY
+
+def url_for(endpoint) -> Optional[str]:
+    key = get_jwt().get('key')  # GSB_API_KEY
+
+    if key is None:
+        return None
 
     return current_app.config['GSB_API_URL'].format(
         endpoint=endpoint,

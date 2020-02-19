@@ -71,12 +71,22 @@ def build_gsb_input(observables):
             'threatEntries': [
                 {'url': value} for value in observables.keys()
             ],
-        }
+        },
     }
 
 
 def validate_gsb_output(gsb_input):
     url = url_for('threatMatches:find')
+
+    if url is None:
+        # Mimic the GSB API error response payload.
+        error = {
+            'code': 403,
+            'message': 'The request is missing a valid API key.',
+            'status': 'PERMISSION_DENIED',
+        }
+        return None, error
+
     response = requests.post(url, json=gsb_input)
 
     if response.ok:
