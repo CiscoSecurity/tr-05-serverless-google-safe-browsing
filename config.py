@@ -12,9 +12,6 @@ class Config(object):
         'type': 'judgement',
         'schema_version': '1.0.14',
         'source': 'Google Safe Browsing',
-        'source_uri': (
-            'https://developers.google.com/safe-browsing/v4/lookup-api'
-        ),
         'confidence': 'High',
         'priority': 90,
         'tlp': 'white',

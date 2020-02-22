@@ -165,6 +165,10 @@ def extract_judgements(observables, matches, start_time):
         if value not in matches:
             continue
 
+        source_uri = current_app.config['GSB_TRANSPARENCY_REPORT_URL'].format(
+            url=quote(value, safe=':')
+        )
+
         judgements = sorted(matches[value], key=key)
 
         for judgement in judgements:
@@ -196,6 +200,7 @@ def extract_judgements(observables, matches, start_time):
                     'severity': severity,
                     'valid_time': valid_time,
                     'reason': reason,
+                    'source_uri': source_uri,
                     **current_app.config['CTIM_JUDGEMENT_DEFAULTS']
                 }
 
