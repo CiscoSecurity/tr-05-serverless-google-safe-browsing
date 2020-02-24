@@ -1,6 +1,7 @@
 from datetime import datetime
 from http import HTTPStatus
 from unittest import mock
+from urllib.parse import quote
 
 from authlib.jose import jwt
 from pytest import fixture
@@ -203,6 +204,10 @@ def expected_payload(route, client, unix_epoch_datetime):
     if route.startswith('/observe'):
         observable = {'type': 'url', 'value': 'https://www.google.com/'}
 
+        source_uri = app.config['GSB_TRANSPARENCY_REPORT_URL'].format(
+            url=quote(observable['value'], safe=':')
+        )
+
         # Implement a dummy class initializing its instances
         # only after the first comparison with any other object.
         class LazyEqualizer:
@@ -249,6 +254,7 @@ def expected_payload(route, client, unix_epoch_datetime):
                         'observable': observable,
                         'reason': 'SOCIAL_ENGINEERING : CHROME',
                         'severity': 'High',
+                        'source_uri': source_uri,
                         'valid_time': {
                             'end_time': '1970-01-01T00:03:20Z',  # 200s
                             'start_time': '1970-01-01T00:00:00Z',
@@ -262,6 +268,7 @@ def expected_payload(route, client, unix_epoch_datetime):
                         'observable': observable,
                         'reason': 'MALWARE : WINDOWS',
                         'severity': 'High',
+                        'source_uri': source_uri,
                         'valid_time': {
                             'end_time': '1970-01-01T00:06:40Z',  # 400s
                             'start_time': '1970-01-01T00:00:00Z',
@@ -275,6 +282,7 @@ def expected_payload(route, client, unix_epoch_datetime):
                         'observable': observable,
                         'reason': 'UNWANTED_SOFTWARE : OSX',
                         'severity': 'Medium',
+                        'source_uri': source_uri,
                         'valid_time': {
                             'end_time': '1970-01-01T00:01:40Z',  # 100s
                             'start_time': '1970-01-01T00:00:00Z',
@@ -288,6 +296,7 @@ def expected_payload(route, client, unix_epoch_datetime):
                         'observable': observable,
                         'reason': 'POTENTIALLY_HARMFUL_APPLICATION : LINUX',
                         'severity': 'Medium',
+                        'source_uri': source_uri,
                         'valid_time': {
                             'end_time': '1970-01-01T00:05:00Z',  # 300s
                             'start_time': '1970-01-01T00:00:00Z',
