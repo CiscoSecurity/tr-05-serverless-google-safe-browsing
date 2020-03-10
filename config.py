@@ -1,7 +1,11 @@
 import os
 
+from version import VERSION
 
-class Config(object):
+
+class Config:
+    VERSION = VERSION
+
     SECRET_KEY = os.environ.get('SECRET_KEY', '')
 
     CTIM_VERDICT_DEFAULTS = {
@@ -32,7 +36,7 @@ class Config(object):
 
     # https://developers.google.com/safe-browsing/v4/reference/rest/v4/ClientInfo
     GSB_API_CLIENT_ID = 'tr-google-safe-browsing-relay'
-    GSB_API_CLIENT_VERSION = '0.0.0'
+    GSB_API_CLIENT_VERSION = VERSION
 
     # https://developers.google.com/safe-browsing/v4/reference/rest/v4/ThreatType
     GSB_API_THREAT_TYPES = {
