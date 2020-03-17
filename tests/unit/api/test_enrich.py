@@ -32,7 +32,7 @@ def test_enrich_call_with_invalid_json_failure(route, client, invalid_json):
     expected_payload = {
         'errors': [
             {
-                'code': 'invalid_argument',
+                'code': 'invalid argument',
                 'message': mock.ANY,
                 'type': 'fatal',
             }
@@ -92,7 +92,7 @@ def test_enrich_call_with_valid_json_but_invalid_jwt_failure(gsb_calling_route,
     expected_payload = {
         'errors': [
             {
-                'code': 'permission_denied',
+                'code': 'permission denied',
                 'message': 'The request is missing a valid API key.',
                 'type': 'fatal',
             }
@@ -426,7 +426,7 @@ def test_enrich_call_with_validation_error_from_gsb_failure(gsb_calling_route,
     expected_payload = {
         'errors': [
             {
-                'code': 'invalid_argument',
+                'code': 'invalid argument',
                 'message': 'API key not valid. Please pass a valid API key.',
                 'type': 'fatal',
             }
