@@ -25,7 +25,7 @@ def test_health_call_with_invalid_jwt_failure(route,
     expected_payload = {
         'errors': [
             {
-                'code': 'permission_denied',
+                'code': 'permission denied',
                 'message': 'The request is missing a valid API key.',
                 'type': 'fatal',
             }
@@ -117,7 +117,7 @@ def test_health_call_with_validation_error_from_gsb_failure(route,
     expected_payload = {
         'errors': [
             {
-                'code': 'invalid_argument',
+                'code': 'invalid argument',
                 'message': 'API key not valid. Please pass a valid API key.',
                 'type': 'fatal',
             }
