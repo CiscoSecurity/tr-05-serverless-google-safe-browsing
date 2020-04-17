@@ -89,7 +89,12 @@ def test_health_call_success(route, client, gsb_api_request, valid_jwt):
         key=jwt.decode(valid_jwt, app.config['SECRET_KEY'])['key'],
     )
 
-    gsb_api_request.assert_called_once_with(expected_url)
+    expected_headers = {
+        'User-Agent': app.config['CTR_USER_AGENT'],
+    }
+
+    gsb_api_request.assert_called_once_with(expected_url,
+                                            headers=expected_headers)
 
     expected_payload = {'data': {'status': 'ok'}}
 
@@ -112,7 +117,12 @@ def test_health_call_with_validation_error_from_gsb_failure(route,
         key=jwt.decode(valid_jwt, app.config['SECRET_KEY'])['key'],
     )
 
-    gsb_api_request.assert_called_once_with(expected_url)
+    expected_headers = {
+        'User-Agent': app.config['CTR_USER_AGENT'],
+    }
+
+    gsb_api_request.assert_called_once_with(expected_url,
+                                            headers=expected_headers)
 
     expected_payload = {
         'errors': [
