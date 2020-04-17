@@ -8,7 +8,7 @@ import requests
 from flask import Blueprint, request, current_app
 
 from api.schemas import ObservableSchema
-from api.utils import url_for, jsonify_data, jsonify_errors
+from api.utils import url_for, headers, jsonify_data, jsonify_errors
 
 enrich_api = Blueprint('enrich', __name__)
 
@@ -87,7 +87,7 @@ def validate_gsb_output(gsb_input):
         }
         return None, error
 
-    response = requests.post(url, json=gsb_input)
+    response = requests.post(url, json=gsb_input, headers=headers())
 
     if response.ok:
         return response.json(), None

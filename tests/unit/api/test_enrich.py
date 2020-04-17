@@ -356,6 +356,10 @@ def test_enrich_call_success(route,
             key=jwt.decode(valid_jwt, app.config['SECRET_KEY'])['key'],
         )
 
+        expected_headers = {
+            'User-Agent': app.config['CTR_USER_AGENT'],
+        }
+
         gsb_api_request.assert_called_once_with(
             expected_url,
             json={
@@ -376,7 +380,8 @@ def test_enrich_call_success(route,
                         {'url': 'https://www.google.com/'},
                     ],
                 },
-            }
+            },
+            headers=expected_headers,
         )
 
     else:
@@ -404,6 +409,10 @@ def test_enrich_call_with_validation_error_from_gsb_failure(gsb_calling_route,
         key=jwt.decode(valid_jwt, app.config['SECRET_KEY'])['key'],
     )
 
+    expected_headers = {
+        'User-Agent': app.config['CTR_USER_AGENT'],
+    }
+
     gsb_api_request.assert_called_once_with(
         expected_url,
         json={
@@ -420,7 +429,8 @@ def test_enrich_call_with_validation_error_from_gsb_failure(gsb_calling_route,
                     {'url': 'https://www.google.com/'},
                 ],
             },
-        }
+        },
+        headers=expected_headers,
     )
 
     expected_payload = {

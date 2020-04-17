@@ -8,6 +8,11 @@ class Config:
 
     SECRET_KEY = os.environ.get('SECRET_KEY', '')
 
+    CTR_USER_AGENT = (
+        'Cisco Threat Response Integrations '
+        '<tr-integrations-support@cisco.com>'
+    )
+
     CTIM_VERDICT_DEFAULTS = {
         'type': 'verdict',
     }

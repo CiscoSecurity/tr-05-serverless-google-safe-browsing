@@ -26,6 +26,12 @@ def url_for(endpoint) -> Optional[str]:
     )
 
 
+def headers():
+    return {
+        'User-Agent': current_app.config['CTR_USER_AGENT'],
+    }
+
+
 def jsonify_data(data):
     return jsonify({'data': data})
 
