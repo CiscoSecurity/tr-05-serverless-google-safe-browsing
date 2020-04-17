@@ -66,3 +66,19 @@ http POST "${URL}"/deliberate/observables Authorization:"Bearer ${JWT}" < observ
 http POST "${URL}"/observe/observables Authorization:"Bearer ${JWT}" < observables.json
 http POST "${URL}"/refer/observables Authorization:"Bearer ${JWT}" < observables.json
 ```
+
+## JSON Web Token Structure
+
+- Header
+```json
+{
+  "alg": "HS256"
+}
+```
+
+- Payload
+```json
+{
+  "key": "<GSB_API_KEY>"
+}
+```
