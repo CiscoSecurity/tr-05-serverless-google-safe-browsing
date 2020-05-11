@@ -67,18 +67,14 @@ http POST "${URL}"/observe/observables Authorization:"Bearer ${JWT}" < observabl
 http POST "${URL}"/refer/observables Authorization:"Bearer ${JWT}" < observables.json
 ```
 
-## JSON Web Token Structure
+## JWT
 
-- Header
-```json
-{
-  "alg": "HS256"
-}
-```
-
-- Payload
 ```json
 {
   "key": "<GSB_API_KEY>"
 }
 ```
+
+Check the full guide on
+[JWT](https://github.com/CiscoSecurity/tr-05-serverless-relay#jwt)
+encoding/decoding for more details.
