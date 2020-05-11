@@ -109,53 +109,61 @@ def gsb_api_request():
         yield mock_request
 
 
-def gsb_api_response(*, ok):
+def gsb_api_response_ok():
     mock_response = mock.MagicMock()
 
-    mock_response.ok = ok
+    mock_response.ok = True
 
-    if ok:
-        payload = {
-            'matches': [
-                {
-                    'threatType': 'MALWARE',
-                    'platformType': 'WINDOWS',
-                    'threat': {'url': 'https://www.google.com/'},
-                    'cacheDuration': '400s',
-                    'threatEntryType': 'URL',
-                },
-                {
-                    'threatType': 'POTENTIALLY_HARMFUL_APPLICATION',
-                    'platformType': 'LINUX',
-                    'threat': {'url': 'https://www.google.com/'},
-                    'cacheDuration': '300s',
-                    'threatEntryType': 'URL',
-                },
-                {
-                    'threatType': 'SOCIAL_ENGINEERING',
-                    'platformType': 'CHROME',
-                    'threat': {'url': 'https://www.google.com/'},
-                    'cacheDuration': '200s',
-                    'threatEntryType': 'URL',
-                },
-                {
-                    'threatType': 'UNWANTED_SOFTWARE',
-                    'platformType': 'OSX',
-                    'threat': {'url': 'https://www.google.com/'},
-                    'cacheDuration': '100s',
-                    'threatEntryType': 'URL',
-                },
-            ]
-        }
+    payload = {
+        'matches': [
+            {
+                'threatType': 'MALWARE',
+                'platformType': 'WINDOWS',
+                'threat': {'url': 'https://www.google.com/'},
+                'cacheDuration': '400s',
+                'threatEntryType': 'URL',
+            },
+            {
+                'threatType': 'POTENTIALLY_HARMFUL_APPLICATION',
+                'platformType': 'LINUX',
+                'threat': {'url': 'https://www.google.com/'},
+                'cacheDuration': '300s',
+                'threatEntryType': 'URL',
+            },
+            {
+                'threatType': 'SOCIAL_ENGINEERING',
+                'platformType': 'CHROME',
+                'threat': {'url': 'https://www.google.com/'},
+                'cacheDuration': '200s',
+                'threatEntryType': 'URL',
+            },
+            {
+                'threatType': 'UNWANTED_SOFTWARE',
+                'platformType': 'OSX',
+                'threat': {'url': 'https://www.google.com/'},
+                'cacheDuration': '100s',
+                'threatEntryType': 'URL',
+            },
+        ]
+    }
 
-    else:
-        payload = {
-            'error': {
-                'code': 400,
-                'message': 'API key not valid. Please pass a valid API key.',
-                'status': 'INVALID_ARGUMENT',
-            }
+    mock_response.json = lambda: payload
+
+    return mock_response
+
+
+def gsb_api_response_error(code, message, status):
+    mock_response = mock.MagicMock()
+
+    mock_response.ok = False
+
+    payload = {
+        'error': {
+            'code': code,
+            'message': message,
+            'status': status,
         }
+    }
 
     mock_response.json = lambda: payload
 
@@ -345,7 +353,7 @@ def test_enrich_call_success(route,
     is_gsb_calling_route = route in gsb_calling_routes()
 
     if is_gsb_calling_route:
-        gsb_api_request.return_value = gsb_api_response(ok=True)
+        gsb_api_request.return_value = gsb_api_response_ok()
 
         response = client.post(route,
                                json=valid_json,
@@ -396,52 +404,77 @@ def test_enrich_call_with_validation_error_from_gsb_failure(gsb_calling_route,
                                                             valid_json,
                                                             gsb_api_request,
                                                             valid_jwt):
-    app = client.application
+    for code, message, status in [
+        (
+            400,
+            'API key not valid. Please pass a valid API key.',
+            'INVALID_ARGUMENT',
+        ),
+        (
+            429,
+            "Quota exceeded for quota group 'LookupAPIGroup' "
+            "and limit 'Lookup API requests per day' "
+            "of service 'safebrowsing.googleapis.com' "
+            "for consumer 'project_number:314159265358'.",
+            'RESOURCE_EXHAUSTED',
+        ),
+    ]:
+        app = client.application
 
-    gsb_api_request.return_value = gsb_api_response(ok=False)
+        gsb_api_request.return_value = gsb_api_response_error(code,
+                                                              message,
+                                                              status)
 
-    response = client.post(gsb_calling_route,
-                           json=valid_json,
-                           headers=headers(valid_jwt))
+        response = client.post(gsb_calling_route,
+                               json=valid_json,
+                               headers=headers(valid_jwt))
 
-    expected_url = app.config['GSB_API_URL'].format(
-        endpoint='threatMatches:find',
-        key=jwt.decode(valid_jwt, app.config['SECRET_KEY'])['key'],
-    )
+        expected_url = app.config['GSB_API_URL'].format(
+            endpoint='threatMatches:find',
+            key=jwt.decode(valid_jwt, app.config['SECRET_KEY'])['key'],
+        )
 
-    expected_headers = {
-        'User-Agent': app.config['CTR_USER_AGENT'],
-    }
+        expected_headers = {
+            'User-Agent': app.config['CTR_USER_AGENT'],
+        }
 
-    gsb_api_request.assert_called_once_with(
-        expected_url,
-        json={
-            'client': {
-                'clientId': app.config['GSB_API_CLIENT_ID'],
-                'clientVersion': app.config['GSB_API_CLIENT_VERSION'],
+        gsb_api_request.assert_called_once_with(
+            expected_url,
+            json={
+                'client': {
+                    'clientId': app.config['GSB_API_CLIENT_ID'],
+                    'clientVersion': app.config['GSB_API_CLIENT_VERSION'],
+                },
+                'threatInfo': {
+                    'threatTypes': list(
+                        app.config['GSB_API_THREAT_TYPES'].keys()
+                    ),
+                    'platformTypes': app.config['GSB_API_PLATFORM_TYPES'],
+                    'threatEntryTypes': (
+                        app.config['GSB_API_THREAT_ENTRY_TYPES']
+                    ),
+                    'threatEntries': [
+                        {'url': 'cisco.com'},
+                        {'url': 'https://www.google.com/'},
+                    ],
+                },
             },
-            'threatInfo': {
-                'threatTypes': list(app.config['GSB_API_THREAT_TYPES'].keys()),
-                'platformTypes': app.config['GSB_API_PLATFORM_TYPES'],
-                'threatEntryTypes': app.config['GSB_API_THREAT_ENTRY_TYPES'],
-                'threatEntries': [
-                    {'url': 'cisco.com'},
-                    {'url': 'https://www.google.com/'},
-                ],
-            },
-        },
-        headers=expected_headers,
-    )
+            headers=expected_headers,
+        )
 
-    expected_payload = {
-        'errors': [
-            {
-                'code': 'invalid argument',
-                'message': 'API key not valid. Please pass a valid API key.',
-                'type': 'fatal',
-            }
-        ]
-    }
+        gsb_api_request.reset_mock()
 
-    assert response.status_code == HTTPStatus.OK
-    assert response.get_json() == expected_payload
+        code = status.lower().replace('_', ' ')
+
+        expected_payload = {
+            'errors': [
+                {
+                    'code': code,
+                    'message': message,
+                    'type': 'fatal',
+                }
+            ]
+        }
+
+        assert response.status_code == HTTPStatus.OK
+        assert response.get_json() == expected_payload
