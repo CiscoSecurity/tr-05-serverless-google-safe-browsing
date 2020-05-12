@@ -42,35 +42,43 @@ def gsb_api_request():
         yield mock_request
 
 
-def gsb_api_response(app, *, ok):
+def gsb_api_response_ok(app):
     mock_response = mock.MagicMock()
 
-    mock_response.ok = ok
+    mock_response.ok = True
 
-    if ok:
-        payload = {
-            'threatLists': [
-                {
-                    'threatType': threat_type,
-                    'platformType': platform_type,
-                    'threatEntryType': threat_entry_type,
-                }
-                for threat_type, platform_type, threat_entry_type in product(
-                    app.config['GSB_API_THREAT_TYPES'],
-                    app.config['GSB_API_PLATFORM_TYPES'],
-                    app.config['GSB_API_THREAT_ENTRY_TYPES'],
-                )
-            ]
-        }
-
-    else:
-        payload = {
-            'error': {
-                'code': 400,
-                'message': 'API key not valid. Please pass a valid API key.',
-                'status': 'INVALID_ARGUMENT',
+    payload = {
+        'threatLists': [
+            {
+                'threatType': threat_type,
+                'platformType': platform_type,
+                'threatEntryType': threat_entry_type,
             }
+            for threat_type, platform_type, threat_entry_type in product(
+                app.config['GSB_API_THREAT_TYPES'],
+                app.config['GSB_API_PLATFORM_TYPES'],
+                app.config['GSB_API_THREAT_ENTRY_TYPES'],
+            )
+        ]
+    }
+
+    mock_response.json = lambda: payload
+
+    return mock_response
+
+
+def gsb_api_response_error(code, message, status):
+    mock_response = mock.MagicMock()
+
+    mock_response.ok = False
+
+    payload = {
+        'error': {
+            'code': code,
+            'message': message,
+            'status': status,
         }
+    }
 
     mock_response.json = lambda: payload
 
@@ -80,7 +88,7 @@ def gsb_api_response(app, *, ok):
 def test_health_call_success(route, client, gsb_api_request, valid_jwt):
     app = client.application
 
-    gsb_api_request.return_value = gsb_api_response(app, ok=True)
+    gsb_api_request.return_value = gsb_api_response_ok(app)
 
     response = client.post(route, headers=headers(valid_jwt))
 
@@ -102,37 +110,58 @@ def test_health_call_success(route, client, gsb_api_request, valid_jwt):
     assert response.get_json() == expected_payload
 
 
-def test_health_call_with_validation_error_from_gsb_failure(route,
-                                                            client,
-                                                            gsb_api_request,
-                                                            valid_jwt):
-    app = client.application
+def test_health_call_with_external_error_from_gsb_failure(route,
+                                                          client,
+                                                          gsb_api_request,
+                                                          valid_jwt):
+    for code, message, status in [
+        (
+            400,
+            'API key not valid. Please pass a valid API key.',
+            'INVALID_ARGUMENT',
+        ),
+        (
+            429,
+            "Quota exceeded for quota group 'LookupAPIGroup' "
+            "and limit 'Lookup API requests per 100 seconds' "
+            "of service 'safebrowsing.googleapis.com' "
+            "for consumer 'project_number:314159265358'.",
+            'RESOURCE_EXHAUSTED',
+        ),
+    ]:
+        app = client.application
 
-    gsb_api_request.return_value = gsb_api_response(app, ok=False)
+        gsb_api_request.return_value = gsb_api_response_error(code,
+                                                              message,
+                                                              status)
 
-    response = client.post(route, headers=headers(valid_jwt))
+        response = client.post(route, headers=headers(valid_jwt))
 
-    expected_url = app.config['GSB_API_URL'].format(
-        endpoint='threatLists',
-        key=jwt.decode(valid_jwt, app.config['SECRET_KEY'])['key'],
-    )
+        expected_url = app.config['GSB_API_URL'].format(
+            endpoint='threatLists',
+            key=jwt.decode(valid_jwt, app.config['SECRET_KEY'])['key'],
+        )
 
-    expected_headers = {
-        'User-Agent': app.config['CTR_USER_AGENT'],
-    }
+        expected_headers = {
+            'User-Agent': app.config['CTR_USER_AGENT'],
+        }
 
-    gsb_api_request.assert_called_once_with(expected_url,
-                                            headers=expected_headers)
+        gsb_api_request.assert_called_once_with(expected_url,
+                                                headers=expected_headers)
 
-    expected_payload = {
-        'errors': [
-            {
-                'code': 'invalid argument',
-                'message': 'API key not valid. Please pass a valid API key.',
-                'type': 'fatal',
-            }
-        ]
-    }
+        gsb_api_request.reset_mock()
 
-    assert response.status_code == HTTPStatus.OK
-    assert response.get_json() == expected_payload
+        code = status.lower().replace('_', ' ')
+
+        expected_payload = {
+            'errors': [
+                {
+                    'code': code,
+                    'message': message,
+                    'type': 'fatal',
+                }
+            ]
+        }
+
+        assert response.status_code == HTTPStatus.OK
+        assert response.get_json() == expected_payload
