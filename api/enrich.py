@@ -254,7 +254,7 @@ def deliberate_observables():
         gsb_output, error = validate_gsb_output(gsb_input)
 
         if error:
-            return jsonify_errors(error)
+            return jsonify_errors(error, data=bundle.json())
 
         matches = group_matches(gsb_output)
 
@@ -295,7 +295,7 @@ def observe_observables():
         gsb_output, error = validate_gsb_output(gsb_input)
 
         if error:
-            return jsonify_errors(error)
+            return jsonify_errors(error, data=bundle.json())
 
         matches = group_matches(gsb_output)
 
