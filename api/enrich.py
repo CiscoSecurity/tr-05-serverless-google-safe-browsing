@@ -1,12 +1,14 @@
 import json
 from collections import defaultdict
 from datetime import datetime, timedelta
+from itertools import chain
 from urllib.parse import quote
 from uuid import uuid4
 
 import requests
 from flask import Blueprint, request, current_app
 
+from api.bundle import Bundle
 from api.schemas import ObservableSchema
 from api.utils import url_for, headers, jsonify_data, jsonify_errors
 
@@ -52,6 +54,22 @@ def group_observables(relay_input):
     }
 
     return observables
+
+
+def chunks(iterable, size):
+    assert size > 0
+
+    chunk = []
+
+    for item in iterable:
+        chunk.append(item)
+
+        if len(chunk) == size:
+            yield chunk
+            chunk = []
+
+    if chunk:
+        yield chunk
 
 
 def build_gsb_input(observables):
@@ -209,10 +227,6 @@ def extract_judgements(observables, matches, start_time):
     return docs
 
 
-def format_docs(docs):
-    return {'count': len(docs), 'docs': docs}
-
-
 @enrich_api.route('/deliberate/observables', methods=['POST'])
 def deliberate_observables():
     relay_input, error = validate_relay_input()
@@ -226,23 +240,30 @@ def deliberate_observables():
         # Optimize a bit by not sending empty requests to the GSB API.
         return jsonify_data({})
 
-    gsb_input = build_gsb_input(observables)
-
-    gsb_output, error = validate_gsb_output(gsb_input)
-
-    if error:
-        return jsonify_errors(error)
-
-    matches = group_matches(gsb_output)
+    bundle = Bundle()
 
     start_time = datetime.utcnow()
 
-    verdicts = extract_verdicts(observables, matches, start_time)
+    # Split the data into chunks and make multiple requests to the GSB API.
 
-    relay_output = {}
+    size = current_app.config['GSB_API_MAX_THREAT_ENTRIES_PER_REQUEST']
 
-    if verdicts:
-        relay_output['verdicts'] = format_docs(verdicts)
+    for observables in map(dict, chunks(observables.items(), size)):
+        gsb_input = build_gsb_input(observables)
+
+        gsb_output, error = validate_gsb_output(gsb_input)
+
+        if error:
+            return jsonify_errors(error)
+
+        matches = group_matches(gsb_output)
+
+        verdicts = extract_verdicts(observables, matches, start_time)
+
+        for entity in verdicts:
+            bundle.add(entity)
+
+    relay_output = bundle.json()
 
     return jsonify_data(relay_output)
 
@@ -260,28 +281,33 @@ def observe_observables():
         # Optimize a bit by not sending empty requests to the GSB API.
         return jsonify_data({})
 
-    gsb_input = build_gsb_input(observables)
-
-    gsb_output, error = validate_gsb_output(gsb_input)
-
-    if error:
-        return jsonify_errors(error)
-
-    matches = group_matches(gsb_output)
+    bundle = Bundle()
 
     start_time = datetime.utcnow()
 
-    # Extract judgements first in order to label each match with some
-    # "judgement_id", so that it can be extracted for each verdict later.
-    judgements = extract_judgements(observables, matches, start_time)
-    verdicts = extract_verdicts(observables, matches, start_time)
+    # Split the data into chunks and make multiple requests to the GSB API.
 
-    relay_output = {}
+    size = current_app.config['GSB_API_MAX_THREAT_ENTRIES_PER_REQUEST']
 
-    if judgements:
-        relay_output['judgements'] = format_docs(judgements)
-    if verdicts:
-        relay_output['verdicts'] = format_docs(verdicts)
+    for observables in map(dict, chunks(observables.items(), size)):
+        gsb_input = build_gsb_input(observables)
+
+        gsb_output, error = validate_gsb_output(gsb_input)
+
+        if error:
+            return jsonify_errors(error)
+
+        matches = group_matches(gsb_output)
+
+        # Extract judgements first in order to label each match with some
+        # "judgement_id", so that it can be extracted for each verdict later.
+        judgements = extract_judgements(observables, matches, start_time)
+        verdicts = extract_verdicts(observables, matches, start_time)
+
+        for entity in chain(judgements, verdicts):
+            bundle.add(entity)
+
+    relay_output = bundle.json()
 
     return jsonify_data(relay_output)
 
