@@ -63,3 +63,6 @@ class Config:
 
     # https://developers.google.com/safe-browsing/v4/reference/rest/v4/ThreatEntryType
     GSB_API_THREAT_ENTRY_TYPES = ['URL']
+
+    # https://developers.google.com/safe-browsing/v4/usage-limits#UsageRestrictions
+    GSB_API_MAX_THREAT_ENTRIES_PER_REQUEST = 500

@@ -36,7 +36,7 @@ def jsonify_data(data):
     return jsonify({'data': data})
 
 
-def jsonify_errors(error):
+def jsonify_errors(error, data=None):
     # Make the actual GSB error payload compatible with the expected TR error
     # payload in order to fix the following types of possible UI alerts, e.g.:
     # :code (not (instance? java.lang.String 40x)),
@@ -52,4 +52,8 @@ def jsonify_errors(error):
     # https://visibility.amp.cisco.com/help/alerts-errors-warnings.
     error['type'] = 'fatal'
 
-    return jsonify({'errors': [error]})
+    payload = {'errors': [error]}
+    if data:
+        payload['data'] = data
+
+    return jsonify(payload)
