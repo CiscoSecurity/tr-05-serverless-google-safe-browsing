@@ -206,7 +206,7 @@ def extract_judgements(observables, matches, start_time):
             for type in types:
                 observable = {'value': value, 'type': type}
 
-                judgement_id = f'transient:{uuid4()}'
+                judgement_id = f'transient:judgement-{uuid4()}'
                 # Label each match with some "judgement_id".
                 judgement['judgement_id'] = judgement_id
 
