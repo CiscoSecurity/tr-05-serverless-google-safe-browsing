@@ -19,7 +19,7 @@ class Config:
 
     CTIM_JUDGEMENT_DEFAULTS = {
         'type': 'judgement',
-        'schema_version': '1.0.14',
+        'schema_version': '1.0.17',
         'source': 'Google Safe Browsing',
         'confidence': 'High',
         'priority': 90,
