@@ -300,7 +300,7 @@ Available `PlatformType`s:
 - `IOS`
 - `CHROME`
 
-Each GSB threat match (i.e. occurrence of a URL in a SBL) results in a CTIM
+Each GSB threat match (i.e. occurrence of a URL in an SBL) results in a CTIM
 `Judgement`. The `reason` of the `Judgement` contains both the `ThreatType` and
 `PlatformType` of the SBL. The `valid_time:start_time` of the `Judgement` is
 set to the current time and the `valid_time:end_time` of the `Judgement` is set
@@ -315,7 +315,7 @@ A CTIM `Verdict` for a URL can be derived from a `Judgement` selected from the
 URL's `Judgement`s according to the simple rules listed below:
 1. Take the `Judgement` with the highest disposition (`Malicious` >
 `Suspicious`).
-2. If there are several such `Judgement`s, take the one with the shortest
-`valid_time` (i.e. the smallest cache duration).
-3. If there are several such `Judgement`s, take any one of them (e.g. the first
-one in the order they were returned by GSB).
+2. If there are several `Judgement`s of this kind, take the one with the
+shortest `valid_time` (i.e. the shortest cache duration).
+3. If there are several `Judgement`s of this kind, take any one of them (e.g.
+the first one in the order they were returned by GSB).
