@@ -274,3 +274,48 @@ header set to `Bearer <JWT>`.
   "key": "<GSB_API_KEY>"
 }
 ```
+
+### CTIM Mapping Specifics
+
+GSB stores its data split into so-called Safe Browsing Lists (SBLs). The SBLs
+are Google's constantly updated lists of unsafe web resources. Examples of
+unsafe web resources are social engineering sites (phishing and deceptive
+sites) and sites that host malware or unwanted software. Each SBL is named
+(identified) using three parameters or type combinations: the `ThreatType`,
+`PlatformType`, and `ThreatEntryType`. Since the `ThreatEntryType` is limited
+to `URL` for this particular integration, the SBLs are actually represented
+using the corresponding `ThreatType`/`PlatformType` pairs.
+
+Available `ThreatType`s:
+- `MALWARE`
+- `SOCIAL_ENGINEERING`
+- `UNWANTED_SOFTWARE`
+- `POTENTIALLY_HARMFUL_APPLICATION`
+
+Available `PlatformType`s:
+- `WINDOWS`
+- `LINUX`
+- `ANDROID`
+- `OSX`
+- `IOS`
+- `CHROME`
+
+Each GSB threat match (i.e. occurrence of a URL in a SBL) results in a CTIM
+`Judgement`. The `reason` of the `Judgement` contains both the `ThreatType` and
+`PlatformType` of the SBL. The `valid_time:start_time` of the `Judgement` is
+set to the current time and the `valid_time:end_time` of the `Judgement` is set
+to the `valid_time:start_time` plus the recommended cache duration (e.g. `300s`)
+also provided by GSB for each threat match. The `disposition_name` and
+`severity` of the `Judgement` depend on the `ThreatType` of the SBL:
+- `MALWARE` or `SOCIAL_ENGINEERING` – `Malicious` and `High` respectively;
+- `UNWANTED_SOFTWARE` or `POTENTIALLY_HARMFUL_APPLICATION` – `Suspicious` and
+`Medium` respectively.
+
+A CTIM `Verdict` for a URL can be derived from a `Judgement` selected from the
+URL's `Judgement`s according to the simple rules listed below:
+1. Take the `Judgement` with the highest disposition (`Malicious` >
+`Suspicious`).
+2. If there are several such `Judgement`s, take the one with the shortest
+`valid_time` (i.e. the smallest cache duration).
+3. If there are several such `Judgement`s, take any one of them (e.g. the first
+one in the order they were returned by GSB).
