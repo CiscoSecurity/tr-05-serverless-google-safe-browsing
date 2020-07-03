@@ -17,9 +17,7 @@ def route(request):
     return request.param
 
 
-def test_health_call_with_invalid_jwt_failure(route,
-                                              client,
-                                              invalid_jwt):
+def test_health_call_with_invalid_jwt_failure(route, client, invalid_jwt):
     response = client.post(route, headers=headers(invalid_jwt))
 
     expected_payload = {
@@ -116,12 +114,12 @@ def test_health_call_with_external_error_from_gsb_failure(route,
                                                           valid_jwt):
     for code, message, status in [
         (
-            400,
+            HTTPStatus.BAD_REQUEST,
             'API key not valid. Please pass a valid API key.',
             'INVALID_ARGUMENT',
         ),
         (
-            429,
+            HTTPStatus.TOO_MANY_REQUESTS,
             "Quota exceeded for quota group 'LookupAPIGroup' "
             "and limit 'Lookup API requests per 100 seconds' "
             "of service 'safebrowsing.googleapis.com' "

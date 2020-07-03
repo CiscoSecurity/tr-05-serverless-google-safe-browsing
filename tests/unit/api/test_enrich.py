@@ -9,14 +9,16 @@ from pytest import fixture
 from .utils import headers
 
 
-def routes():
+def implemented_routes():
     yield '/deliberate/observables'
     yield '/observe/observables'
     yield '/refer/observables'
 
 
-@fixture(scope='module', params=routes(), ids=lambda route: f'POST {route}')
-def route(request):
+@fixture(scope='module',
+         params=implemented_routes(),
+         ids=lambda route: f'POST {route}')
+def implemented_route(request):
     return request.param
 
 
@@ -25,8 +27,10 @@ def invalid_json():
     return [{'type': 'unknown', 'value': ''}]
 
 
-def test_enrich_call_with_invalid_json_failure(route, client, invalid_json):
-    response = client.post(route, json=invalid_json)
+def test_enrich_call_with_invalid_json_failure(implemented_route,
+                                               client,
+                                               invalid_json):
+    response = client.post(implemented_route, json=invalid_json)
 
     # The actual error message is quite unwieldy, so let's just ignore it.
     expected_payload = {
@@ -41,6 +45,18 @@ def test_enrich_call_with_invalid_json_failure(route, client, invalid_json):
 
     assert response.status_code == HTTPStatus.OK
     assert response.get_json() == expected_payload
+
+
+def gsb_api_routes():
+    yield '/deliberate/observables'
+    yield '/observe/observables'
+
+
+@fixture(scope='module',
+         params=gsb_api_routes(),
+         ids=lambda route: f'POST {route}')
+def gsb_api_route(request):
+    return request.param
 
 
 @fixture(scope='module')
@@ -65,27 +81,15 @@ def valid_json():
         {
             'type': 'file_name',
             'value': 'danger.exe',
-        }
+        },
     ]
 
 
-def gsb_calling_routes():
-    yield '/deliberate/observables'
-    yield '/observe/observables'
-
-
-@fixture(scope='module',
-         params=gsb_calling_routes(),
-         ids=lambda gsb_calling_route: f'POST {gsb_calling_route}')
-def gsb_calling_route(request):
-    return request.param
-
-
-def test_enrich_call_with_valid_json_but_invalid_jwt_failure(gsb_calling_route,
+def test_enrich_call_with_valid_json_but_invalid_jwt_failure(gsb_api_route,
                                                              client,
                                                              valid_json,
                                                              invalid_jwt):
-    response = client.post(gsb_calling_route,
+    response = client.post(gsb_api_route,
                            json=valid_json,
                            headers=headers(invalid_jwt))
 
@@ -101,6 +105,19 @@ def test_enrich_call_with_valid_json_but_invalid_jwt_failure(gsb_calling_route,
 
     assert response.status_code == HTTPStatus.OK
     assert response.get_json() == expected_payload
+
+
+def all_routes():
+    yield '/deliberate/observables'
+    yield '/observe/observables'
+    yield '/refer/observables'
+
+
+@fixture(scope='module',
+         params=all_routes(),
+         ids=lambda route: f'POST {route}')
+def any_route(request):
+    return request.param
 
 
 @fixture(scope='function')
@@ -178,12 +195,12 @@ def unix_epoch_datetime():
 
 
 @fixture(scope='module')
-def expected_payload(route, client, unix_epoch_datetime):
+def expected_payload(any_route, client, unix_epoch_datetime):
     app = client.application
 
     payload = None
 
-    if route.startswith('/deliberate'):
+    if any_route.startswith('/deliberate'):
         observable = {'type': 'url', 'value': 'https://www.google.com/'}
 
         # Convert GSB threat types to TR dispositions.
@@ -209,7 +226,7 @@ def expected_payload(route, client, unix_epoch_datetime):
             },
         }
 
-    if route.startswith('/observe'):
+    if any_route.startswith('/observe'):
         observable = {'type': 'url', 'value': 'https://www.google.com/'}
 
         source_uri = app.config['GSB_TRANSPARENCY_REPORT_URL'].format(
@@ -315,7 +332,7 @@ def expected_payload(route, client, unix_epoch_datetime):
             },
         }
 
-    if route.startswith('/refer'):
+    if any_route.startswith('/refer'):
         payload = [
             {
                 'categories': ['Search', 'Google Safe Browsing'],
@@ -339,10 +356,12 @@ def expected_payload(route, client, unix_epoch_datetime):
             },
         ]
 
+    assert payload is not None, f'Unknown route: {any_route}.'
+
     return {'data': payload}
 
 
-def test_enrich_call_success(route,
+def test_enrich_call_success(any_route,
                              client,
                              valid_json,
                              gsb_api_request,
@@ -350,12 +369,12 @@ def test_enrich_call_success(route,
                              expected_payload):
     app = client.application
 
-    is_gsb_calling_route = route in gsb_calling_routes()
+    response = None
 
-    if is_gsb_calling_route:
+    if any_route.startswith(('/deliberate', '/observe')):
         gsb_api_request.return_value = gsb_api_response_ok()
 
-        response = client.post(route,
+        response = client.post(any_route,
                                json=valid_json,
                                headers=headers(valid_jwt))
 
@@ -392,26 +411,28 @@ def test_enrich_call_success(route,
             headers=expected_headers,
         )
 
-    else:
-        response = client.post(route, json=valid_json)
+    if any_route.startswith('/refer'):
+        response = client.post(any_route, json=valid_json)
+
+    assert response is not None, f'Unknown route: {any_route}.'
 
     assert response.status_code == HTTPStatus.OK
     assert response.get_json() == expected_payload
 
 
-def test_enrich_call_with_validation_error_from_gsb_failure(gsb_calling_route,
-                                                            client,
-                                                            valid_json,
-                                                            gsb_api_request,
-                                                            valid_jwt):
+def test_enrich_call_with_external_error_from_gsb_failure(gsb_api_route,
+                                                          client,
+                                                          valid_json,
+                                                          gsb_api_request,
+                                                          valid_jwt):
     for code, message, status in [
         (
-            400,
+            HTTPStatus.BAD_REQUEST,
             'API key not valid. Please pass a valid API key.',
             'INVALID_ARGUMENT',
         ),
         (
-            429,
+            HTTPStatus.TOO_MANY_REQUESTS,
             "Quota exceeded for quota group 'LookupAPIGroup' "
             "and limit 'Lookup API requests per day' "
             "of service 'safebrowsing.googleapis.com' "
@@ -425,7 +446,7 @@ def test_enrich_call_with_validation_error_from_gsb_failure(gsb_calling_route,
                                                               message,
                                                               status)
 
-        response = client.post(gsb_calling_route,
+        response = client.post(gsb_api_route,
                                json=valid_json,
                                headers=headers(valid_jwt))
 
