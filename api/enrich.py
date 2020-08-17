@@ -1,6 +1,7 @@
 import json
 from collections import defaultdict
 from datetime import datetime, timedelta
+from http import HTTPStatus
 from itertools import chain
 from urllib.parse import quote
 from uuid import uuid4
@@ -10,7 +11,7 @@ from flask import Blueprint, request, current_app
 
 from api.bundle import Bundle
 from api.schemas import ObservableSchema
-from api.utils import url_for, headers, jsonify_data, jsonify_errors
+from api.utils import url_for, execute, headers, jsonify_errors, jsonify_data
 
 enrich_api = Blueprint('enrich', __name__)
 
@@ -26,7 +27,7 @@ def validate_relay_input():
         relay_input = None
         # Mimic the GSB API error response payload.
         error = {
-            'code': 400,
+            'code': HTTPStatus.BAD_REQUEST,
             'message': f'Invalid JSON payload received. {json.dumps(error)}.',
             'details': error,
             'status': 'INVALID_ARGUMENT',
@@ -93,24 +94,19 @@ def build_gsb_input(observables):
     }
 
 
-def validate_gsb_output(gsb_input):
+def fetch_gsb_output(gsb_input):
     url = url_for('threatMatches:find')
 
     if url is None:
         # Mimic the GSB API error response payload.
         error = {
-            'code': 403,
+            'code': HTTPStatus.FORBIDDEN,
             'message': 'The request is missing a valid API key.',
             'status': 'PERMISSION_DENIED',
         }
         return None, error
 
-    response = requests.post(url, json=gsb_input, headers=headers())
-
-    if response.ok:
-        return response.json(), None
-    else:
-        return None, response.json()['error']
+    return execute(requests.post, url, json=gsb_input, headers=headers())
 
 
 def group_matches(gsb_output):
@@ -251,7 +247,7 @@ def deliberate_observables():
     for observables in map(dict, chunks(observables.items(), size)):
         gsb_input = build_gsb_input(observables)
 
-        gsb_output, error = validate_gsb_output(gsb_input)
+        gsb_output, error = fetch_gsb_output(gsb_input)
 
         if error:
             return jsonify_errors(error, data=bundle.json())
@@ -292,7 +288,7 @@ def observe_observables():
     for observables in map(dict, chunks(observables.items(), size)):
         gsb_input = build_gsb_input(observables)
 
-        gsb_output, error = validate_gsb_output(gsb_input)
+        gsb_output, error = fetch_gsb_output(gsb_input)
 
         if error:
             return jsonify_errors(error, data=bundle.json())
