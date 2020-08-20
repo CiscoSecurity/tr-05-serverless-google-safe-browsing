@@ -1,7 +1,9 @@
+from http import HTTPStatus
+
 import requests
 from flask import Blueprint
 
-from api.utils import url_for, headers, jsonify_data, jsonify_errors
+from api.utils import url_for, execute, headers, jsonify_errors, jsonify_data
 
 health_api = Blueprint('health', __name__)
 
@@ -13,16 +15,15 @@ def health():
     if url is None:
         # Mimic the GSB API error response payload.
         error = {
-            'code': 403,
+            'code': HTTPStatus.FORBIDDEN,
             'message': 'The request is missing a valid API key.',
             'status': 'PERMISSION_DENIED',
         }
         return jsonify_errors(error)
 
-    response = requests.get(url, headers=headers())
+    _, error = execute(requests.get, url, headers=headers())
 
-    if response.ok:
-        return jsonify_data({'status': 'ok'})
-    else:
-        error = response.json()['error']
+    if error:
         return jsonify_errors(error)
+    else:
+        return jsonify_data({'status': 'ok'})
