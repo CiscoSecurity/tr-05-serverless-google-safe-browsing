@@ -2,22 +2,43 @@ from ssl import SSLCertVerificationError
 from typing import Optional
 
 from authlib.jose import jwt
-from authlib.jose.errors import JoseError
+from authlib.jose.errors import BadSignatureError, DecodeError
 from flask import request, current_app, jsonify
 from requests.exceptions import SSLError
 
+from api.errors import AuthenticationRequiredError
 
-def get_jwt():
+
+def get_auth_token():
+    expected_errors = {
+        KeyError: 'Authorization header is missing',
+        AssertionError: 'Wrong authorization type'
+    }
+
     try:
         scheme, token = request.headers['Authorization'].split()
         assert scheme.lower() == 'bearer'
-        return jwt.decode(token, current_app.config['SECRET_KEY'])
-    except (KeyError, ValueError, AssertionError, JoseError):
-        return {}
+        return token
+    except tuple(expected_errors) as error:
+        raise AuthenticationRequiredError(expected_errors[error.__class__])
+
+
+def get_key() -> Optional[str]:
+    expected_errors = {
+        KeyError: 'Wrong JWT payload structure',
+        TypeError: '<SECRET_KEY> is missing',
+        BadSignatureError: 'Failed to decode JWT with provided key',
+        DecodeError: 'Wrong JWT structure'
+    }
+    token = get_auth_token()
+    try:
+        return jwt.decode(token, current_app.config['SECRET_KEY'])["key"]
+    except tuple(expected_errors) as error:
+        raise AuthenticationRequiredError(expected_errors[error.__class__])
 
 
 def url_for(endpoint) -> Optional[str]:
-    key = get_jwt().get('key')  # GSB_API_KEY
+    key = get_key()  # GSB_API_KEY
 
     if key is None:
         return None
