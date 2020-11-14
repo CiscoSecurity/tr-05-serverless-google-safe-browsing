@@ -259,6 +259,9 @@ header set to `Bearer <JWT>`.
   underlying external service and look up the observable there.
   - Returns a list of those links.
 
+- `POST /version`
+  - Returns the current version of the application.
+
 ### Supported Types of Observables
 
 - `url`
