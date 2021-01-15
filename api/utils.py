@@ -1,18 +1,34 @@
+import json
 from ssl import SSLCertVerificationError
 from typing import Optional
 
-from authlib.jose import jwt
-from authlib.jose.errors import BadSignatureError, DecodeError
+import requests
+import jwt
+from jwt import InvalidSignatureError, DecodeError, InvalidAudienceError
 from flask import request, current_app, jsonify
-from requests.exceptions import SSLError
+from requests.exceptions import SSLError, ConnectionError, InvalidURL
 
 from api.errors import AuthenticationRequiredError
+
+NO_HEADER = 'Authorization header is missing'
+WRONG_TYPE = 'Wrong authorization type'
+WRONG_PAYLOAD_STRUCTURE = 'Wrong JWT payload structure'
+WRONG_JWT_STRUCTURE = 'Wrong JWT structure'
+WRONG_AUDIENCE = 'Wrong configuration-token-audience'
+KID_NOT_FOUND = 'kid from JWT header not found in API response'
+WRONG_KEY = ('Failed to decode JWT with provided key. '
+             'Make suer domain in custom_jwks_host '
+             'corresponds to your SekureX instance region.')
+JWK_HOST_MISSING = ('jwk_host is missing in JWT payload. Make sure '
+                    'custom_jwks_host field is present in module_type')
+WRONG_JWKS_HOST = ('Wrong jwks_host in JWT payload. Make sure domain follows '
+                   'the visibility.<region>.cisco.com structure')
 
 
 def get_auth_token():
     expected_errors = {
-        KeyError: 'Authorization header is missing',
-        AssertionError: 'Wrong authorization type'
+        KeyError: NO_HEADER,
+        AssertionError: WRONG_TYPE
     }
 
     try:
@@ -23,18 +39,57 @@ def get_auth_token():
         raise AuthenticationRequiredError(expected_errors[error.__class__])
 
 
-def get_key() -> Optional[str]:
+def get_public_key(jwks_host, token):
     expected_errors = {
-        KeyError: 'Wrong JWT payload structure',
-        TypeError: '<SECRET_KEY> is missing',
-        BadSignatureError: 'Failed to decode JWT with provided key',
-        DecodeError: 'Wrong JWT structure'
+        ConnectionError: WRONG_JWKS_HOST,
+        InvalidURL: WRONG_JWKS_HOST,
     }
+    try:
+        response = requests.get(f"https://{jwks_host}/.well-known/jwks")
+        jwks = response.json()
+
+        public_keys = {}
+        for jwk in jwks['keys']:
+            kid = jwk['kid']
+            public_keys[kid] = jwt.algorithms.RSAAlgorithm.from_jwk(
+                json.dumps(jwk)
+            )
+        kid = jwt.get_unverified_header(token)['kid']
+        return public_keys.get(kid)
+
+    except tuple(expected_errors) as error:
+        message = expected_errors[error.__class__]
+        raise AuthenticationRequiredError(message)
+
+
+def get_key():
+    """
+    Get authorization token and validate its signature against the public key
+    from /.well-known/jwks endpoint
+    """
+    expected_errors = {
+        KeyError: WRONG_PAYLOAD_STRUCTURE,
+        AssertionError: JWK_HOST_MISSING,
+        InvalidSignatureError: WRONG_KEY,
+        DecodeError: WRONG_JWT_STRUCTURE,
+        InvalidAudienceError: WRONG_AUDIENCE,
+        TypeError: KID_NOT_FOUND
+    }
+
     token = get_auth_token()
     try:
-        return jwt.decode(token, current_app.config['SECRET_KEY'])["key"]
+        jwks_host = jwt.decode(
+            token, options={'verify_signature': False}).get('jwks_host')
+        assert jwks_host
+        key = get_public_key(jwks_host, token)
+        aud = request.url_root
+        payload = jwt.decode(
+            token, key=key, algorithms=['RS256'], audience=[aud.rstrip('/')]
+        )
+        return payload['key']
     except tuple(expected_errors) as error:
-        raise AuthenticationRequiredError(expected_errors[error.__class__])
+        message = expected_errors[error.__class__]
+        raise AuthenticationRequiredError(message)
 
 
 def url_for(endpoint) -> Optional[str]:

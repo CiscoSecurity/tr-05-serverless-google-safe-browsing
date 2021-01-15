@@ -1,11 +1,13 @@
 from http import HTTPStatus
 from itertools import product
 from unittest import mock
+from unittest.mock import call
 
-from authlib.jose import jwt
 from pytest import fixture
 
 from .utils import headers
+from api.utils import get_key
+from tests.unit.api.mock_for_tests import EXPECTED_RESPONSE_OF_JWKS_ENDPOINT
 
 
 def routes():
@@ -15,30 +17,6 @@ def routes():
 @fixture(scope='module', params=routes(), ids=lambda route: f'POST {route}')
 def route(request):
     return request.param
-
-
-def test_health_call_with_invalid_jwt_failure(route, client, invalid_jwt):
-    response = client.post(route, headers=headers(invalid_jwt))
-
-    expected_payload = {
-        'errors': [
-            {
-                'code': 'authorization failed',
-                'message': 'Authorization failed: Failed to decode JWT with '
-                           'provided key',
-                'type': 'fatal',
-            }
-        ]
-    }
-
-    assert response.status_code == HTTPStatus.OK
-    assert response.get_json() == expected_payload
-
-
-@fixture(scope='function')
-def gsb_api_request():
-    with mock.patch('requests.get') as mock_request:
-        yield mock_request
 
 
 def gsb_api_response_ok(app):
@@ -84,24 +62,33 @@ def gsb_api_response_error(code, message, status):
     return mock_response
 
 
-def test_health_call_success(route, client, gsb_api_request, valid_jwt):
+def test_health_call_success(route, client, rsa_api_response,
+                             gsb_api_request_get, valid_jwt):
     app = client.application
 
-    gsb_api_request.return_value = gsb_api_response_ok(app)
+    gsb_api_request_get.return_value = rsa_api_response(
+        payload=EXPECTED_RESPONSE_OF_JWKS_ENDPOINT
+    )
 
-    response = client.post(route, headers=headers(valid_jwt))
+    response = client.post(route, headers=headers(valid_jwt()))
 
     expected_url = app.config['GSB_API_URL'].format(
         endpoint='threatLists',
-        key=jwt.decode(valid_jwt, app.config['SECRET_KEY'])['key'],
+        key=get_key()
     )
 
     expected_headers = {
         'User-Agent': app.config['CTR_USER_AGENT'],
     }
 
-    gsb_api_request.assert_called_once_with(expected_url,
-                                            headers=expected_headers)
+    calls = [
+        call('https://visibility.amp.cisco.com/.well-known/jwks'),
+        call(expected_url, headers=expected_headers),
+        call().ok.__bool__(),
+        call('https://visibility.amp.cisco.com/.well-known/jwks')
+    ]
+
+    gsb_api_request_get.assert_has_calls(calls)
 
     expected_payload = {'data': {'status': 'ok'}}
 
@@ -111,44 +98,52 @@ def test_health_call_success(route, client, gsb_api_request, valid_jwt):
 
 def test_health_call_with_external_error_from_gsb_failure(route,
                                                           client,
-                                                          gsb_api_request,
-                                                          valid_jwt):
+                                                          gsb_api_request_get,
+                                                          valid_jwt,
+                                                          rsa_api_response):
     for code, message, status in [
         (
-            HTTPStatus.BAD_REQUEST,
-            'API key not valid. Please pass a valid API key.',
-            'INVALID_ARGUMENT',
+                HTTPStatus.BAD_REQUEST,
+                'API key not valid. Please pass a valid API key.',
+                'INVALID_ARGUMENT',
         ),
         (
-            HTTPStatus.TOO_MANY_REQUESTS,
-            "Quota exceeded for quota group 'LookupAPIGroup' "
-            "and limit 'Lookup API requests per 100 seconds' "
-            "of service 'safebrowsing.googleapis.com' "
-            "for consumer 'project_number:314159265358'.",
-            'RESOURCE_EXHAUSTED',
+                HTTPStatus.TOO_MANY_REQUESTS,
+                "Quota exceeded for quota group 'LookupAPIGroup' "
+                "and limit 'Lookup API requests per 100 seconds' "
+                "of service 'safebrowsing.googleapis.com' "
+                "for consumer 'project_number:314159265358'.",
+                'RESOURCE_EXHAUSTED',
         ),
     ]:
         app = client.application
 
-        gsb_api_request.return_value = gsb_api_response_error(code,
-                                                              message,
-                                                              status)
+        gsb_api_request_get.side_effect = (
+            rsa_api_response(payload=EXPECTED_RESPONSE_OF_JWKS_ENDPOINT),
+            gsb_api_response_error(code, message, status),
+            rsa_api_response(payload=EXPECTED_RESPONSE_OF_JWKS_ENDPOINT)
+        )
 
-        response = client.post(route, headers=headers(valid_jwt))
+        response = client.post(route, headers=headers(valid_jwt()))
 
         expected_url = app.config['GSB_API_URL'].format(
             endpoint='threatLists',
-            key=jwt.decode(valid_jwt, app.config['SECRET_KEY'])['key'],
+            key=get_key()
         )
 
         expected_headers = {
             'User-Agent': app.config['CTR_USER_AGENT'],
         }
 
-        gsb_api_request.assert_called_once_with(expected_url,
-                                                headers=expected_headers)
+        calls = [
+            call('https://visibility.amp.cisco.com/.well-known/jwks'),
+            call(expected_url, headers=expected_headers),
+            call('https://visibility.amp.cisco.com/.well-known/jwks')
+        ]
 
-        gsb_api_request.reset_mock()
+        gsb_api_request_get.assert_has_calls(calls)
+
+        gsb_api_request_get.reset_mock()
 
         code = status.lower().replace('_', ' ')
 
