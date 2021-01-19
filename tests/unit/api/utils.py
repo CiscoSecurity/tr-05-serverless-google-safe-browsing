@@ -1,2 +1,2 @@
-def headers(jwt):
-    return {'Authorization': f'Bearer {jwt}'}
+def headers(jwt, type_='Bearer'):
+    return {'Authorization': f'{type_} {jwt}'}

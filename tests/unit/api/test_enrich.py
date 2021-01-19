@@ -3,9 +3,10 @@ from http import HTTPStatus
 from unittest import mock
 from urllib.parse import quote
 
-from authlib.jose import jwt
 from pytest import fixture
 
+from api.utils import get_key
+from tests.unit.api.mock_for_tests import EXPECTED_RESPONSE_OF_JWKS_ENDPOINT
 from .utils import headers
 
 
@@ -59,55 +60,6 @@ def gsb_api_route(request):
     return request.param
 
 
-@fixture(scope='module')
-def valid_json():
-    return [
-        {
-            'type': 'domain',
-            'value': 'cisco.com',
-        },
-        {
-            'type': 'url',
-            'value': 'https://www.google.com/',
-        },
-        {
-            'type': 'ip',
-            'value': '8.8.8.8',
-        },
-        {
-            'type': 'sha256',
-            'value': '01' * 32,
-        },
-        {
-            'type': 'file_name',
-            'value': 'danger.exe',
-        },
-    ]
-
-
-def test_enrich_call_with_valid_json_but_invalid_jwt_failure(gsb_api_route,
-                                                             client,
-                                                             valid_json,
-                                                             invalid_jwt):
-    response = client.post(gsb_api_route,
-                           json=valid_json,
-                           headers=headers(invalid_jwt))
-
-    expected_payload = {
-        'errors': [
-            {
-                'code': 'authorization failed',
-                'message': 'Authorization failed: Failed to decode JWT with '
-                           'provided key',
-                'type': 'fatal',
-            }
-        ]
-    }
-
-    assert response.status_code == HTTPStatus.OK
-    assert response.get_json() == expected_payload
-
-
 def all_routes():
     yield '/deliberate/observables'
     yield '/observe/observables'
@@ -119,12 +71,6 @@ def all_routes():
          ids=lambda route: f'POST {route}')
 def any_route(request):
     return request.param
-
-
-@fixture(scope='function')
-def gsb_api_request():
-    with mock.patch('requests.post') as mock_request:
-        yield mock_request
 
 
 def gsb_api_response_ok():
@@ -365,30 +311,36 @@ def expected_payload(any_route, client, unix_epoch_datetime):
 def test_enrich_call_success(any_route,
                              client,
                              valid_json,
-                             gsb_api_request,
+                             gsb_api_request_post,
+                             gsb_api_request_get,
                              valid_jwt,
-                             expected_payload):
+                             expected_payload,
+                             rsa_api_response):
     app = client.application
 
     response = None
 
     if any_route.startswith(('/deliberate', '/observe')):
-        gsb_api_request.return_value = gsb_api_response_ok()
+
+        gsb_api_request_post.return_value = gsb_api_response_ok()
+        gsb_api_request_get.return_value = rsa_api_response(
+            payload=EXPECTED_RESPONSE_OF_JWKS_ENDPOINT
+        )
 
         response = client.post(any_route,
                                json=valid_json,
-                               headers=headers(valid_jwt))
+                               headers=headers(valid_jwt()))
 
         expected_url = app.config['GSB_API_URL'].format(
             endpoint='threatMatches:find',
-            key=jwt.decode(valid_jwt, app.config['SECRET_KEY'])['key'],
+            key=get_key()
         )
 
         expected_headers = {
             'User-Agent': app.config['CTR_USER_AGENT'],
         }
 
-        gsb_api_request.assert_called_once_with(
+        gsb_api_request_post.assert_called_once_with(
             expected_url,
             json={
                 'client': {
@@ -424,43 +376,47 @@ def test_enrich_call_success(any_route,
 def test_enrich_call_with_external_error_from_gsb_failure(gsb_api_route,
                                                           client,
                                                           valid_json,
-                                                          gsb_api_request,
-                                                          valid_jwt):
+                                                          gsb_api_request_post,
+                                                          gsb_api_request_get,
+                                                          valid_jwt,
+                                                          rsa_api_response):
     for code, message, status in [
         (
-            HTTPStatus.BAD_REQUEST,
-            'API key not valid. Please pass a valid API key.',
-            'INVALID_ARGUMENT',
+                HTTPStatus.BAD_REQUEST,
+                'API key not valid. Please pass a valid API key.',
+                'INVALID_ARGUMENT',
         ),
         (
-            HTTPStatus.TOO_MANY_REQUESTS,
-            "Quota exceeded for quota group 'LookupAPIGroup' "
-            "and limit 'Lookup API requests per day' "
-            "of service 'safebrowsing.googleapis.com' "
-            "for consumer 'project_number:314159265358'.",
-            'RESOURCE_EXHAUSTED',
+                HTTPStatus.TOO_MANY_REQUESTS,
+                "Quota exceeded for quota group 'LookupAPIGroup' "
+                "and limit 'Lookup API requests per day' "
+                "of service 'safebrowsing.googleapis.com' "
+                "for consumer 'project_number:314159265358'.",
+                'RESOURCE_EXHAUSTED',
         ),
     ]:
         app = client.application
 
-        gsb_api_request.return_value = gsb_api_response_error(code,
-                                                              message,
-                                                              status)
+        gsb_api_request_post.return_value = gsb_api_response_error(code,
+                                                                   message,
+                                                                   status)
+        gsb_api_request_get.return_value = rsa_api_response(
+            payload=EXPECTED_RESPONSE_OF_JWKS_ENDPOINT)
 
         response = client.post(gsb_api_route,
                                json=valid_json,
-                               headers=headers(valid_jwt))
+                               headers=headers(valid_jwt()))
 
         expected_url = app.config['GSB_API_URL'].format(
             endpoint='threatMatches:find',
-            key=jwt.decode(valid_jwt, app.config['SECRET_KEY'])['key'],
+            key=get_key()
         )
 
         expected_headers = {
             'User-Agent': app.config['CTR_USER_AGENT'],
         }
 
-        gsb_api_request.assert_called_once_with(
+        gsb_api_request_post.assert_called_once_with(
             expected_url,
             json={
                 'client': {
@@ -484,7 +440,7 @@ def test_enrich_call_with_external_error_from_gsb_failure(gsb_api_route,
             headers=expected_headers,
         )
 
-        gsb_api_request.reset_mock()
+        gsb_api_request_post.reset_mock()
 
         code = status.lower().replace('_', ' ')
 
