@@ -45,7 +45,7 @@ def get_public_key(jwks_host, token):
         InvalidURL: WRONG_JWKS_HOST,
     }
     try:
-        response = requests.get(f"http://{jwks_host}/.well-known/jwks")
+        response = requests.get(f"https://{jwks_host}/.well-known/jwks")
         jwks = response.json()
 
         public_keys = {}
