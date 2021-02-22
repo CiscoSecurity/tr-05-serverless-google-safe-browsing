@@ -7,7 +7,6 @@ from api.respond import respond_api
 from api.version import version_api
 from api.watchdog import watchdog_api
 
-
 app = Flask(__name__)
 
 app.url_map.strict_slashes = False
