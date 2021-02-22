@@ -1,0 +1,57 @@
+{
+  "title": "Google Safe Browsing",
+  "default_name": "Google Safe Browsing",
+  "short_description": "Safe Browsing is a Google service that lets client applications check URLs against Google's constantly updated lists of unsafe web resources. Examples of unsafe web resources are social engineering sites (phishing and deceptive sites) and sites that host malware or unwanted software.",
+  "description": "Google Safe Browsing helps protect over four billion devices every day by showing warnings to users when they attempt to navigate to dangerous sites or download dangerous files. Safe Browsing also notifies webmasters when their websites are compromised by malicious actors and helps them diagnose and resolve the problem so that their visitors stay safer. Safe Browsing protections work across Google products and power safer browsing experiences across the Internet.\n\n\nGoogle [Transparency Report](https://transparencyreport.google.com/safe-browsing/overview) includes details on the threats that Safe Browsing identifies. The Transparency Report includes Google [Site Status diagnostic tool](https://transparencyreport.google.com/safe-browsing/search) that you can use to see whether a site currently contains content that Safe Browsing has determined to be dangerous.",
+  "tips": "When configuring this integration, you must first gather some information from your Google Safe Browsing account.\n\n 1. Follow the steps to [get started](https://developers.google.com/safe-browsing/v4/get-started) using the Google Safe Browsing API \n2. Copy the **API key** into a file, or leave the tab open \n3. Complete the **Add New Google Safe Browsing** form:\n    - **Module Name** - Leave the default name or enter a name that is meaningful to you\n    - **API Key** - Enter the API Key from your Google Safe Browsing Credentials\n 4. Click **Save** to complete the Google Safe Browsing module configuration. ",
+  "external_references": [
+    {
+      "label": "Free Trial",
+      "link": "https://developers.google.com/safe-browsing/v4"
+    },
+    {
+      "label": "Check Site Status",
+      "link": "https://transparencyreport.google.com/safe-browsing/search"
+    }
+  ],
+  "configuration_spec": [
+    {
+      "key": "custom_key",
+      "type": "api_key",
+      "label": "API KEY",
+      "required": true,
+      "tooltip": "The Google Safe Browsing API Key"
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "health",
+      "description": "Performs health check against Google Safe Browsing API."
+    },
+    {
+      "id": "observe",
+      "description": "Query Google Safe Browsing for Domain and URL return Judgement and Verdict"
+    },
+    {
+      "id": "deliberate",
+      "description": "Query Google Safe Browsing for Domain and URL return Verdict"
+    },
+    {
+      "id": "refer",
+      "description": "Pivot on Domain and URL to Google Safe Browsing site status"
+    }
+  ],
+  "properties": {
+    "url": "https://ciscohosted.url",
+    "supported-apis": [
+      "health",
+      "observe/observables",
+      "deliberate/observables",
+      "refer/observables"
+    ],
+    "auth-type": "configuration-token",
+    "configuration-token-alg": "RS256",
+    "custom_jwks_host": "visibility.amp.cisco.com"
+  },
+  "logo": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiA0OCIgd2lkdGg9IjMyIiBoZWlnaHQ9IjQ4Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImdyZDEiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiAgeDE9IjE1Ljg4MyIgeTE9IjUuMzkzIiB4Mj0iMTUuODgzIiB5Mj0iNy41NyI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMjYzMjM4IiBzdG9wLW9wYWNpdHk9IjAuMzUiIC8+PHN0b3Agb2Zmc2V0PSIwLjQyIiBzdG9wLWNvbG9yPSIjMjYzMjM4IiBzdG9wLW9wYWNpdHk9IjAuMTUiIC8+PHN0b3Agb2Zmc2V0PSIwLjg5IiBzdG9wLWNvbG9yPSIjMjYzMjM4IiBzdG9wLW9wYWNpdHk9IjAuMDIiIC8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMjYzMjM4IiBzdG9wLW9wYWNpdHk9IjAiIC8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHN0eWxlPnRzcGFuIHsgd2hpdGUtc3BhY2U6cHJlIH0uc2hwMCB7IGZpbGw6ICM2NmJiNmEgfSAuc2hwMSB7IGZpbGw6ICMzODhlM2MgfSAuc2hwMiB7IGZpbGw6IHVybCgjZ3JkMSkgfSAuc2hwMyB7IGZpbGw6ICNmYWZhZmEgfSAuc2hwNCB7IGZpbGw6ICNlMGUwZTAgfSAuc2hwNSB7IGZpbGw6ICNmZmZmZmYgfSA8L3N0eWxlPjxwYXRoIGNsYXNzPSJzaHAwIiBkPSJNMS4xMyA1LjgxTDEuMTMgOS43NUMxLjEzIDIwLjY4IDEuMTUgMjguMjQgNy40NSAzNC42QzkuODggMzcuMDUgMTUuODEgNDEuMDYgMTUuODEgNDEuMDZMMTUuODEgMi4xN0M5LjY0IDIuMTcgMy40OCA0Ljk1IDEuMTMgNS44MVoiIC8+PHBhdGggY2xhc3M9InNocDEiIGQ9Ik0zMC40OSA1Ljc2QzI3LjU1IDQuODQgMjEuOTcgMi4xNyAxNS44MSAyLjE3TDE1LjgxIDQxLjA2QzE1LjgxIDQxLjA2IDIxLjc2IDM3LjA1IDI0LjE5IDM0LjU5QzMwLjUxIDI4LjIyIDMwLjQ5IDIxLjUzIDMwLjQ5IDExLjIxTDMwLjQ5IDUuNzZaIiAvPjxnID48cGF0aCBjbGFzcz0ic2hwMiIgZD0iTTAgNS44MUwzMS43NyA1LjgxTDMxLjc3IDguNDRMMCA4LjQ0TDAgNS44MVoiIC8+PC9nPjxnID48cGF0aCBjbGFzcz0ic2hwMyIgZD0iTTE1Ljk0IDQwLjc3QzEzLjMgNDAuNzcgMTEuMTcgMzguNjIgMTEuMTcgMzUuOTZDMTEuMTcgMzMuMjkgMTMuMyAzMS4xNCAxNS45NCAzMS4xNEMxOC41OCAzMS4xNCAyMC43MSAzMy4yOSAyMC43MSAzNS45NkMyMC43MSAzOC42MiAxOC41OCA0MC43NyAxNS45NCA0MC43N1oiIC8+PHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGFzcz0ic2hwMyIgZD0iTTguMzggMzkuMkM3LjExIDM2LjExIDcuODEgMzIuNTYgMTAuMTUgMzAuMkMxMi40OSAyNy44MyAxNi4wMiAyNy4xMiAxOS4wNyAyOC40QzIyLjEzIDI5LjY4IDI0LjEzIDMyLjcgMjQuMTMgMzYuMDRDMjQuMTMgMzcuMTIgMjMuOTIgMzguMiAyMy41IDM5LjJDMjMuMDkgNDAuMiAyMi40OSA0MS4xMSAyMS43MyA0MS44OEMyMC45NyA0Mi42NSAyMC4wNyA0My4yNiAxOS4wNyA0My42N0MxOC4wOCA0NC4wOSAxNy4wMiA0NC4zIDE1Ljk0IDQ0LjNDMTIuNjMgNDQuMyA5LjY0IDQyLjI5IDguMzggMzkuMlpNOS44NiAzMy41QzguODQgMzUuOTggOS40IDM4Ljg0IDExLjI5IDQwLjc0QzEzLjE3IDQyLjY0IDE2IDQzLjIxIDE4LjQ2IDQyLjE4QzIwLjkyIDQxLjE1IDIyLjUzIDM4LjczIDIyLjUzIDM2LjA0QzIyLjUzIDM1LjE3IDIyLjM1IDM0LjMgMjIuMDIgMzMuNUMyMS42OSAzMi42OSAyMS4yMSAzMS45NiAyMC41OSAzMS4zNEMxOS45OCAzMC43MiAxOS4yNiAzMC4yNCAxOC40NiAyOS45QzE3LjY2IDI5LjU3IDE2LjgxIDI5LjM5IDE1Ljk0IDI5LjM5QzEzLjI4IDI5LjM5IDEwLjg4IDMxLjAxIDkuODYgMzMuNVoiIC8+PHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGFzcz0ic2hwMyIgZD0iTTUuMTQgNDAuNTVDMy4zMyAzNi4xNCA0LjMzIDMxLjA3IDcuNjcgMjcuNjlDMTEuMDIgMjQuMzIgMTYuMDUgMjMuMzEgMjAuNDIgMjUuMTRDMjQuNzkgMjYuOTYgMjcuNjMgMzEuMjcgMjcuNjMgMzYuMDRDMjcuNjMgMzcuNTkgMjcuMzMgMzkuMTIgMjYuNzQgNDAuNTVDMjYuMTUgNDEuOTggMjUuMjkgNDMuMjggMjQuMjEgNDQuMzhDMjMuMTIgNDUuNDggMjEuODMgNDYuMzQgMjAuNDEgNDYuOTRDMTkgNDcuNTMgMTcuNDggNDcuODQgMTUuOTQgNDcuODRDMTEuMjEgNDcuODQgNi45NSA0NC45NiA1LjE0IDQwLjU1Wk0xNS45NCAyNS45M0MxMS44OSAyNS45MyA4LjI0IDI4LjQgNi42OSAzMi4xN0M1LjE0IDM1Ljk1IDYgNDAuMjkgOC44NiA0My4xOEMxMS43MyA0Ni4wNyAxNi4wMyA0Ni45NCAxOS43NyA0NS4zN0MyMy41MSA0My44MSAyNS45NSA0MC4xMyAyNS45NSAzNi4wNEMyNS45NSAzNC43MSAyNS42OSAzMy40IDI1LjE5IDMyLjE3QzI0LjY4IDMwLjk1IDIzLjk0IDI5Ljg0IDIzLjAyIDI4LjlDMjIuMDkgMjcuOTYgMjAuOTggMjcuMjIgMTkuNzcgMjYuNzFDMTguNTYgMjYuMiAxNy4yNiAyNS45NCAxNS45NCAyNS45NEwxNS45NCAyNS45M1oiIC8+PHBhdGggY2xhc3M9InNocDMiIGQ9Ik0xNS43MSAyMS40NEMxMy4wNCAyMS40NCAxMC44NyAxOS4yNSAxMC44NyAxNi41NUMxMC44NyAxMy44NSAxMy4wNCAxMS42NyAxNS43MSAxMS42N0MxOC4zOSAxMS42NyAyMC41NSAxMy44NSAyMC41NSAxNi41NUMyMC41NSAxOS4yNSAxOC4zOSAyMS40NCAxNS43MSAyMS40NFoiIC8+PC9nPjxwYXRoIGNsYXNzPSJzaHA0IiBkPSJNMzAuNDkgNS42M0wzMC40OSAyLjYxQzMwLjQ5IDEuNTIgMjkgMCAyNy42NyAwTDMuNyAwQzIuMzggMCAxLjEzIDEuNTIgMS4xMyAyLjYxTDEuMTMgNS42M0wzMC40OSA1LjYzTDMwLjQ5IDUuNjNaIiAvPjxwYXRoIGNsYXNzPSJzaHA1IiBkPSJNNC43NSA0LjA0QzQuMjggNC4wNCAzLjg5IDMuNjUgMy44OSAzLjE3QzMuODkgMi42OSA0LjI4IDIuMyA0Ljc1IDIuM0M1LjIzIDIuMyA1LjYyIDIuNjkgNS42MiAzLjE3QzUuNjIgMy42NSA1LjIzIDQuMDQgNC43NSA0LjA0WiIgLz48cGF0aCBjbGFzcz0ic2hwNSIgZD0iTTcuOTEgNC4wNEM3LjQzIDQuMDQgNy4wNSAzLjY1IDcuMDUgMy4xN0M3LjA1IDIuNjkgNy40MyAyLjMgNy45MSAyLjNDOC4zOSAyLjMgOC43OCAyLjY5IDguNzggMy4xN0M4Ljc4IDMuNjUgOC4zOSA0LjA0IDcuOTEgNC4wNFoiIC8+PC9zdmc+"
+}

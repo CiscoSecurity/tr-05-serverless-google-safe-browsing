@@ -101,3 +101,13 @@ nKyI8B5gw4C0G0iL1dSsz2bR1O4GNOVfT3R6joZEXATFo/Kc2L0YAvApBNUYvY0k
 bjJ/JfTO5060SsWftf4iw3jrhSn9RwTTYdq/kErGFWvDGJn2MiuhMe2onNfVzIGR
 mdUxHwi1ulkspAn/fmY7f0hZpskDwcHyZmbKZuk+NU/FJ8IAcmvk9y7m25nSSc8=
 -----END RSA PRIVATE KEY-----"""
+
+EXPECTED_WATCHDOG_ERROR = {
+    'errors': [
+        {
+            'code': 'health check failed',
+            'message': 'Invalid Health Check.',
+            'type': 'fatal'
+        }
+    ]
+}
