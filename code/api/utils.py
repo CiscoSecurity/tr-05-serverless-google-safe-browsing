@@ -83,9 +83,7 @@ def get_key():
         jwks_host = jwt.decode(
             token, options={'verify_signature': False}).get('jwks_host')
         assert jwks_host
-
         key = get_public_key(jwks_host, token)
-
         aud = request.url_root
         payload = jwt.decode(
             token, key=key, algorithms=['RS256'], audience=[aud.rstrip('/')]
