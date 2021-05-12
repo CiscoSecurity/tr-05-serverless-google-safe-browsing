@@ -1,11 +1,11 @@
 import json
+from json.decoder import JSONDecodeError
 from ssl import SSLCertVerificationError
 from typing import Optional
-from urllib.error import URLError, HTTPError
 
 import requests
 import jwt
-from jwt import PyJWKClient, InvalidSignatureError, DecodeError, InvalidAudienceError, PyJWKClientError
+from jwt import InvalidSignatureError, DecodeError, InvalidAudienceError
 from flask import request, current_app, jsonify
 from requests.exceptions import SSLError, ConnectionError, InvalidURL
 
@@ -40,6 +40,30 @@ def get_auth_token():
         raise AuthenticationRequiredError(expected_errors[error.__class__])
 
 
+def get_public_key(jwks_host, token):
+    expected_errors = {
+        ConnectionError: WRONG_JWKS_HOST,
+        InvalidURL: WRONG_JWKS_HOST,
+        JSONDecodeError: WRONG_JWKS_HOST
+    }
+    try:
+        response = requests.get(f"https://{jwks_host}/.well-known/jwks")
+        jwks = response.json()
+
+        public_keys = {}
+        for jwk in jwks['keys']:
+            kid = jwk['kid']
+            public_keys[kid] = jwt.algorithms.RSAAlgorithm.from_jwk(
+                json.dumps(jwk)
+            )
+        kid = jwt.get_unverified_header(token)['kid']
+        return public_keys.get(kid)
+
+    except tuple(expected_errors) as error:
+        message = expected_errors[error.__class__]
+        raise AuthenticationRequiredError(message)
+
+
 def get_key():
     """
     Get authorization token and validate its signature against the public key
@@ -51,10 +75,7 @@ def get_key():
         InvalidSignatureError: WRONG_KEY,
         DecodeError: WRONG_JWT_STRUCTURE,
         InvalidAudienceError: WRONG_AUDIENCE,
-        HTTPError: WRONG_JWKS_HOST,
-        URLError: WRONG_JWKS_HOST,
-        ConnectionError: WRONG_JWKS_HOST,
-        PyJWKClientError: KID_NOT_FOUND
+        TypeError: KID_NOT_FOUND
     }
 
     token = get_auth_token()
@@ -63,12 +84,11 @@ def get_key():
             token, options={'verify_signature': False}).get('jwks_host')
         assert jwks_host
 
-        jwks_client = PyJWKClient(f'https://{jwks_host}/.well-known/jwks')
-        signing_key = jwks_client.get_signing_key_from_jwt(token)
+        key = get_public_key(jwks_host, token)
 
         aud = request.url_root
         payload = jwt.decode(
-            token, key=signing_key.key, algorithms=['RS256'], audience=[aud.rstrip('/')]
+            token, key=key, algorithms=['RS256'], audience=[aud.rstrip('/')]
         )
         return payload['key']
     except tuple(expected_errors) as error:
