@@ -7,7 +7,8 @@ import jwt
 import requests
 from flask import request, current_app, jsonify
 from jwt import InvalidSignatureError, DecodeError, InvalidAudienceError
-from requests.exceptions import SSLError, ConnectionError, InvalidURL, HTTPError
+from requests.exceptions import (
+    SSLError, ConnectionError, InvalidURL, HTTPError)
 
 from api.errors import AuthenticationRequiredError
 
