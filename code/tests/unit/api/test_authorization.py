@@ -112,16 +112,13 @@ def test_call_with_wrong_jwt_payload_structure(
 
 
 def test_call_with_missing_jwks_host(
-        gsb_api_route, client, valid_json, valid_jwt, gsb_api_request_get,
-        rsa_api_response, authorization_errors_expected_payload
+        gsb_api_route, client, valid_json, valid_jwt,
+        authorization_errors_expected_payload
 ):
-    gsb_api_request_get.return_value = rsa_api_response(
-        payload=EXPECTED_RESPONSE_OF_JWKS_ENDPOINT
-    )
 
     response = client.post(
         gsb_api_route, json=valid_json,
-        headers=headers(valid_jwt(jwks_host=''))
+        headers=headers(valid_jwt(wrong_jwks_host=True))
     )
     assert response.status_code == HTTPStatus.OK
     assert response.json == authorization_errors_expected_payload(

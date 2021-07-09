@@ -83,9 +83,11 @@ def test_health_call_success(route, client, rsa_api_response,
 
     calls = [
         call('https://visibility.amp.cisco.com/.well-known/jwks'),
+        call().raise_for_status(),
         call(expected_url, headers=expected_headers),
         call().ok.__bool__(),
-        call('https://visibility.amp.cisco.com/.well-known/jwks')
+        call('https://visibility.amp.cisco.com/.well-known/jwks'),
+        call().raise_for_status()
     ]
 
     gsb_api_request_get.assert_has_calls(calls)
